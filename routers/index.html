@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Port forwarding to conflicting address space</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Port forwarding to conflicting address space</h1>
+</header>
+<style>
+body { min-width: 50% !important; }
+</style>
+<h2 id="the-problem">The problem</h2>
+<p>When configuring routers, it would be nice parallelize the work by
+making changes on several devices at once. However, by default all of
+the devices use the same IP addresses, so how would you talk to all of
+them at the same time?</p>
+<p><img src="mybody.jpg"
+alt="My body is a machine that turns pizza and oreos into weird router configs" /> </p>
+<h2 id="potential-solutions">Potential solutions</h2>
+<p>My first thought it to have a setup with several routers, and let
+each mask their own private instance of the conflicting address
+space.</p>
+<p>This naive approach would work, but has the drawback of physical
+complexity and requiring a large number of routers.</p>
+<p>An evolution of this concept is using network namespaces. I love
+network namespaces, I love them so much that I wrote a network topology
+simulator called <a
+href="https://github.com/h0dgep0dge/virtopology">virtopology</a>. Using
+namespaces trades the physical complexity for some software complexity,
+but I find the structure very understandable and easy to visualize.</p>
+<p>he drawback of this approach is that it requires a platform that has
+both enough ports for the devices you want to talk to, and software that
+supports configuring namespaces. The only device I have that meets these
+requirements is a WatchGuard Firebox M4600, not a terribly convenient or
+pleasant machine to use. As much as I love Mikrotik, to my knowledge
+their devices do not support configuring network namespaces.</p>
+<h2 id="the-winning-solution">The winning solution</h2>
+<p>To take advantage of my Mikrotik routers and switches with numerous
+ports, I decided to implement a solution using the features of
+RouterOS.</p>
+<p>The key to this solution is that network routes can be hidden away in
+their own tables, where they are ignored until they’re applied to a
+particular connection.</p>
+<p>Flows can be marked to be governed by a particular routing table by a
+mangle firewall rule, the destination address rewritten to target the
+device of interest by a dstnat firewall rule, and finally the source ip
+address rewritten something the target device knows how to respond
+to.</p>
+<h2 id="the-lab">The lab</h2>
+<p>As I didn’t feel like setting up a real router and target devices to
+test with, I spun up 5 virtual machines. Linux Mint for to run a
+browser, 3 Alpine Linux to act at the devices being configured, and
+RouterOS to run the show.</p>
+<p>To simulate several identical devices, the Alpine nodes got nearly
+identical configurations, a static ip of <code>192.168.20.1/24</code>,
+and a web server to identify each one. The Linux Mint live instance
+recieved no special configuration, the interface configuring by DHCP.
+The RouterOS VM has a separate link to each of the other VMs.</p>
+<pre><code>                               -------------- 192.168.20.0/24 ------------
+                               |            |-----------------| Alpine 1 |
+                               |            |                 ------------
+-------------- 192.168.88.0/24 |            | 192.168.20.0/24 ------------
+| Linux Mint |-----------------|  RouterOS  |-----------------| Alpine 2 |
+--------------                 |            |                 ------------
+                               |            | 192.168.20.0/24 ------------
+                               |            |-----------------| Alpine 3 |
+                               --------------                 ------------</code></pre>
+<h2 id="the-config">The config</h2>
+<p>For the router to be able to talk to the devices of interest at all,
+it will need source IP addresses, routing tables for each device, and
+routes.</p>
+<pre><code>/ip/address
+add address=192.168.20.2 interface=ether2 network=192.168.20.2
+add address=192.168.20.2 interface=ether3 network=192.168.20.2
+add address=192.168.20.2 interface=ether4 network=192.168.20.2
+
+/routing/table
+add disabled=no fib name=router1
+add disabled=no fib name=router2
+add disabled=no fib name=router3
+
+/ip/route
+add disabled=no dst-address=192.168.20.0/24 gateway=ether2 routing-table=router1 supress-hw-offload=no
+add disabled=no dst-address=192.168.20.0/24 gateway=ether3 routing-table=router2 supress-hw-offload=no
+add disabled=no dst-address=192.168.20.0/24 gateway=ether4 routing-table=router3 supress-hw-offload=no</code></pre>
+<p>Notice the interfaces are given a single address and not an address
+part of a subnet, this is to prevent the OS from creating a dynamic
+route that may mess with the setup, though it shouldn’t be necessary in
+theory because the traffic we’re interested in shouldn’t ever be looking
+at the main routing table.</p>
+<p>The next thing the router needs is to brand the traffic it wants to
+forward with the mark of the router it should be forwarded to, or more
+specifically the mark of the routing table that should be used to route
+it.</p>
+<pre><code>/ip/firewall/mangle
+add action=mark-routing chain=prerouting dst-address=192.168.20.101 new-routing-mark=router1
+add action=mark-routing chain=prerouting dst-address=192.168.20.102 new-routing-mark=router2
+add action=mark-routing chain=prerouting dst-address=192.168.20.103 new-routing-mark=router3</code></pre>
+<p>And further, packets should be destination NATed to the IP address of
+the device of interest.</p>
+<pre><code>/ip/firewall/nat
+add action=dst-nat chain=dstnat dst-address=192.168.20.0/24 in-interface=ether1 to-address=192.168.20.1</code></pre>
+<p>Notice all packets are forwarded to the same IP address, however by
+this point they’ve already been marked with the routing table they
+should use, so they continue on with the memory of the specific device
+they were originally destined for. A key fact here is that packets are
+always processed against the mangle table <em>before</em> the dstnat
+table, meaning they already have a routing mark when the destination IP
+address is changed.</p>
+<p>Finally, the packet has been given the appropriate destination IP,
+has been marked to use the appropriate routing table, but the source IP
+address is still the one of the original client, but the device of
+interest may not know where to send packets to get them back to this IP.
+This is solved by using a masquerade rule on the outgoing interfaces,
+which rewrites the source IP address to the one of the outgoing
+interface itself, on the 192.168.20.0/24 subnet, which the final
+endpoint will know how to reply to.</p>
+<pre><code>/ip/firewall/nat
+add action=masquerade chain=srcnat out-interface=ether2
+add action=masquerade chain=srcnat out-interface=ether3
+add action=masquerade chain=srcnat out-interface=ether4</code></pre>
+<h2 id="the-proof-is-in-the-forwarding">The proof is in the
+forwarding</h2>
+<p><img src="routers.png"
+alt="Screenshot showing the IP address of each Alpine VM is the same" />
+<img src="results.png"
+alt="Screenshot of the Mint VM communicating with each Alpine VM individually" /></p>
+<p>:^)</p>
+</body>
+</html>
